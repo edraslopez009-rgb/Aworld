@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AWorld – Math Quests</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        background: linear-gradient(to bottom, #0a0f2c, #1b2a6d);
+        color: white;
+        margin: 0;
+        padding: 0;
+        text-align: center;
+    }
+
+    header {
+        background: #111;
+        padding: 15px;
+        font-size: 28px;
+        font-weight: bold;
+    }
+
+    .container {
+        padding: 20px;
+        max-width: 700px;
+        margin: auto;
+    }
+
+    .card {
+        background: rgba(255,255,255,0.1);
+        padding: 20px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+    }
+
+    input, select, button {
+        padding: 10px;
+        margin: 5px;
+        border-radius: 6px;
+        border: none;
+        font-size: 16px;
+    }
+
+    button {
+        background: #4caf50;
+        color: white;
+        cursor: pointer;
+    }
+
+    button:disabled {
+        background: gray;
+        cursor: not-allowed;
+    }
+
+    .hidden {
+        display: none;
+    }
+
+    .quest {
+        margin: 15px 0;
+    }
+</style>
+</head>
+<body>
+
+<header>🌍 AWorld</header>
+
+<div class="container">
+
+    <!-- LOGIN -->
+    <div class="card" id="loginCard">
+        <h2>Enter AWorld</h2>
+        <input type="text" id="username" placeholder="Username"><br>
+        <select id="grade">
+            <option value="">Select Grade</option>
+            <option value="3">Grade 3</option>
+            <option value="4">Grade 4</option>
+            <option value="5">Grade 5</option>
+            <option value="6">Grade 6</option>
+            <option value="7">Grade 7</option>
+            <option value="8">Grade 8</option>
+        </select><br>
+        <button onclick="startGame()">Start</button>
+    </div>
+
+    <!-- QUESTS -->
+    <div class="card hidden" id="questCard">
+        <h2>Daily Math Quests</h2>
+        <p id="questInfo"></p>
+        <div id="quests"></div>
+        <button onclick="checkAnswers()">Submit Quests</button>
+    </div>
+
+    <!-- MULTIPLAYER -->
+    <div class="card hidden" id="multiplayerCard">
+        <h2>🎮 Multiplayer World Unlocked!</h2>
+        <p>You completed all daily quests!</p>
+        <p>This is where the **3D multiplayer math game** will load.</p>
+        <button onclick="alert('3D game coming soon!')">Enter 3D World</button>
+    </div>
+
+</div>
+
+<script>
+let correctAnswers = [];
+let completed = 0;
+
+function startGame() {
+    const name = document.getElementById("username").value;
+    const grade = document.getElementById("grade").value;
+
+    if (!name || !grade) {
+        alert("Please enter username and grade");
+        return;
+    }
+
+    document.getElementById("loginCard").classList.add("hidden");
+    document.getElementById("questCard").classList.remove("hidden");
+
+    generateQuests(parseInt(grade));
+}
+
+function generateQuests(grade) {
+    const questsDiv = document.getElementById("quests");
+    questsDiv.innerHTML = "";
+    correctAnswers = [];
+    completed = 0;
+
+    document.getElementById("questInfo").innerText =
+        "Complete 4 math quests to unlock multiplayer mode.";
+
+    for (let i = 0; i < 4; i++) {
+        let a = Math.floor(Math.random() * (grade * 5)) + 1;
+        let b = Math.floor(Math.random() * (grade * 5)) + 1;
+        let answer = a + b;
+
+        correctAnswers.push(answer);
+
+        questsDiv.innerHTML += `
+            <div class="quest">
+                Quest ${i + 1}: ${a} + ${b} =
+                <input type="number" id="q${i}">
+            </div>
+        `;
+    }
+}
+
+function checkAnswers() {
+    let score = 0;
+
+    for (let i = 0; i < 4; i++) {
+        let userAnswer = document.getElementById(`q${i}`).value;
+        if (parseInt(userAnswer) === correctAnswers[i]) {
+            score++;
+        }
+    }
+
+    if (score === 4) {
+        document.getElementById("questCard").classList.add("hidden");
+        document.getElementById("multiplayerCard").classList.remove("hidden");
+    } else {
+        alert("You got " + score + "/4 correct. Try again!");
+    }
+}
+</script>
+
+</body>
+</html>
