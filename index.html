@@ -2,243 +2,221 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AWorld</title>
+<title>AWorld – 2D Math Adventure</title>
 
 <style>
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: linear-gradient(#0b102b, #1c2a6b);
+    background: #111;
     color: white;
-    text-align: center;
 }
 
-header {
-    background: #0a0a0a;
-    padding: 15px;
-    font-size: 30px;
-    font-weight: bold;
-}
-
-.container {
-    max-width: 800px;
-    margin: auto;
-    padding: 20px;
-}
-
-.card {
-    background: rgba(255,255,255,0.1);
-    padding: 20px;
-    border-radius: 12px;
-    margin-bottom: 20px;
+#ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background: rgba(0,0,0,0.8);
+    padding: 12px;
+    border-radius: 10px;
+    width: 250px;
 }
 
 input, select, button {
-    padding: 10px;
-    margin: 5px;
-    font-size: 16px;
-    border-radius: 6px;
-    border: none;
+    width: 100%;
+    padding: 8px;
+    margin: 5px 0;
 }
 
 button {
     background: #4caf50;
+    border: none;
     color: white;
     cursor: pointer;
-}
-
-button:disabled {
-    background: gray;
 }
 
 .hidden {
     display: none;
 }
 
-.quest {
-    margin: 12px 0;
+canvas {
+    display: block;
+    background: #2c7a3f;
 }
 
-.progress {
-    height: 18px;
-    background: #333;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.progress-bar {
-    height: 100%;
-    background: #4caf50;
-    width: 0%;
+#popup {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.9);
+    padding: 20px;
+    border-radius: 12px;
+    width: 300px;
+    text-align: center;
 }
 </style>
 </head>
 
 <body>
 
-<header>🌍 AWorld</header>
+<div id="ui">
+    <div id="login">
+        <h2>AWorld</h2>
+        <input id="username" placeholder="Username">
+        <select id="grade">
+            <option value="">Grade</option>
+            <option>3</option><option>4</option><option>5</option>
+            <option>6</option><option>7</option><option>8</option>
+        </select>
+        <button onclick="start()">Start</button>
+    </div>
 
-<div class="container">
-
-<!-- LOGIN -->
-<div class="card" id="loginCard">
-    <h2>Enter AWorld</h2>
-    <input id="username" placeholder="Username"><br>
-    <select id="grade">
-        <option value="">Select Grade</option>
-        <option value="3">Grade 3</option>
-        <option value="4">Grade 4</option>
-        <option value="5">Grade 5</option>
-        <option value="6">Grade 6</option>
-        <option value="7">Grade 7</option>
-        <option value="8">Grade 8</option>
-    </select><br>
-    <button onclick="login()">Start Adventure</button>
-</div>
-
-<!-- DASHBOARD -->
-<div class="card hidden" id="dashboard">
-    <h2 id="welcome"></h2>
-    <p>Level: <span id="level">1</span> | XP: <span id="xp">0</span></p>
-    <div class="progress">
-        <div class="progress-bar" id="xpBar"></div>
+    <div id="hud" class="hidden">
+        <div id="stats"></div>
+        <button onclick="openDaily()">Daily Quests</button>
     </div>
 </div>
 
-<!-- QUESTS -->
-<div class="card hidden" id="questCard">
-    <h2>📜 Daily Math Quests</h2>
-    <p>Complete all 4 quests to unlock multiplayer</p>
-    <div id="quests"></div>
-    <button onclick="submitQuests()">Submit</button>
-</div>
-
-<!-- MULTIPLAYER -->
-<div class="card hidden" id="multiplayerCard">
-    <h2>🎮 Multiplayer World</h2>
-    <p>Welcome to the 3D Math World!</p>
-    <button onclick="openMinigames()">Math Minigames</button>
-    <button onclick="enter3D()">Enter 3D World</button>
-</div>
-
-<!-- MINIGAMES -->
-<div class="card hidden" id="minigameCard">
-    <h2>🧠 Math Minigames</h2>
-    <button onclick="alert('Speed Math coming soon!')">⚡ Speed Math</button>
-    <button onclick="alert('Puzzle World coming soon!')">🧩 Puzzle World</button>
-    <button onclick="alert('Battle Math coming soon!')">⚔️ Battle Math</button>
-</div>
-
-</div>
+<canvas id="game"></canvas>
+<div id="popup" class="hidden"></div>
 
 <script>
-let user = {};
-let answers = [];
-const QUESTS_PER_DAY = 4;
-
-function login() {
-    const name = username.value;
-    const grade = parseInt(document.getElementById("grade").value);
-    if (!name || !grade) return alert("Fill everything!");
-
-    user = JSON.parse(localStorage.getItem("aworldUser")) || {
-        name, grade, xp: 0, level: 1, lastQuest: ""
-    };
-
-    localStorage.setItem("aworldUser", JSON.stringify(user));
-
-    loginCard.classList.add("hidden");
-    dashboard.classList.remove("hidden");
-    questCard.classList.remove("hidden");
-
-    welcome.innerText = "Welcome, " + user.name;
-    updateXP();
-    loadQuests();
+/* ================= SAVE ================= */
+let save = JSON.parse(localStorage.getItem("aworld2d")) || {
+    name: "", grade: 3, xp: 0, level: 1, lastDay: ""
+};
+function saveGame() {
+    localStorage.setItem("aworld2d", JSON.stringify(save));
 }
 
-function loadQuests() {
+/* ================= LOGIN ================= */
+function start() {
+    if (!username.value || !grade.value) return alert("Fill everything");
+    save.name = username.value;
+    save.grade = parseInt(grade.value);
+    saveGame();
+    login.classList.add("hidden");
+    hud.classList.remove("hidden");
+    updateHUD();
+    initGame();
+}
+
+function updateHUD() {
+    stats.innerHTML =
+        `👤 ${save.name}<br>
+         🎓 Grade ${save.grade}<br>
+         ⭐ Level ${save.level}<br>
+         ⚡ XP ${save.xp}`;
+}
+
+/* ================= DAILY QUEST ================= */
+function openDaily() {
     const today = new Date().toDateString();
-    if (user.lastQuest === today) {
-        questCard.classList.add("hidden");
-        multiplayerCard.classList.remove("hidden");
-        return;
-    }
+    if (save.lastDay === today) return alert("Daily quests done!");
 
-    quests.innerHTML = "";
-    answers = [];
-
-    for (let i = 0; i < QUESTS_PER_DAY; i++) {
-        let a = rand(user.grade * 5);
-        let b = rand(user.grade * 5);
-        let type = rand(4);
-        let question, answer;
-
-        if (type === 0) { question = `${a} + ${b}`; answer = a + b; }
-        if (type === 1) { question = `${a} - ${b}`; answer = a - b; }
-        if (type === 2) { question = `${a} × ${b}`; answer = a * b; }
-        if (type === 3) { 
-            b = b || 1;
-            question = `${a*b} ÷ ${b}`;
-            answer = a;
-        }
-
-        answers.push(answer);
-        quests.innerHTML += `
-        <div class="quest">
-            ${question} =
-            <input type="number" id="q${i}">
-        </div>`;
-    }
-}
-
-function submitQuests() {
     let correct = 0;
-    for (let i = 0; i < QUESTS_PER_DAY; i++) {
-        if (parseInt(document.getElementById(`q${i}`).value) === answers[i]) {
-            correct++;
+    for (let i = 0; i < 4; i++) {
+        let a = rand(save.grade * 5);
+        let b = rand(save.grade * 5);
+        if (!prompt(`${a} + ${b} = ?`)) return;
+        if (parseInt(prompt(`${a} + ${b} = ?`)) === a + b) correct++;
+    }
+
+    if (correct === 4) {
+        save.xp += 100;
+        save.lastDay = today;
+        if (save.xp >= save.level * 200) {
+            save.xp = 0;
+            save.level++;
         }
-    }
-
-    if (correct === QUESTS_PER_DAY) {
-        user.xp += 100;
-        user.lastQuest = new Date().toDateString();
-        levelUp();
-        save();
-        questCard.classList.add("hidden");
-        multiplayerCard.classList.remove("hidden");
-    } else {
-        alert(`You got ${correct}/${QUESTS_PER_DAY}. Try again!`);
-    }
+        saveGame();
+        updateHUD();
+        alert("Daily quests complete!");
+    } else alert("Try again tomorrow!");
 }
 
-function levelUp() {
-    while (user.xp >= user.level * 200) {
-        user.xp -= user.level * 200;
-        user.level++;
-    }
-    updateXP();
+/* ================= GAME ================= */
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+
+let player = { x: 100, y: 100, size: 20 };
+let keys = {};
+
+const zones = [
+    { x: 300, y: 200, type: "add" },
+    { x: 500, y: 200, type: "multiply" },
+    { x: 700, y: 200, type: "speed" }
+];
+
+function initGame() {
+    window.addEventListener("keydown", e => keys[e.key]=true);
+    window.addEventListener("keyup", e => keys[e.key]=false);
+    loop();
 }
 
-function updateXP() {
-    xp.innerText = user.xp;
-    level.innerText = user.level;
-    xpBar.style.width = (user.xp / (user.level * 200)) * 100 + "%";
+function loop() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Move
+    if (keys["w"]) player.y -= 3;
+    if (keys["s"]) player.y += 3;
+    if (keys["a"]) player.x -= 3;
+    if (keys["d"]) player.x += 3;
+
+    // Player
+    ctx.fillStyle = "cyan";
+    ctx.fillRect(player.x, player.y, player.size, player.size);
+
+    // Zones
+    zones.forEach(z => {
+        ctx.fillStyle = z.type === "add" ? "red" :
+                        z.type === "multiply" ? "orange" : "purple";
+        ctx.fillRect(z.x, z.y, 40, 40);
+
+        if (Math.hypot(player.x - z.x, player.y - z.y) < 30) {
+            openMinigame(z.type);
+        }
+    });
+
+    requestAnimationFrame(loop);
 }
 
-function openMinigames() {
-    minigameCard.classList.toggle("hidden");
+/* ================= MINIGAMES ================= */
+let inGame = false;
+
+function openMinigame(type) {
+    if (inGame) return;
+    inGame = true;
+
+    let a = rand(save.grade * 5);
+    let b = rand(save.grade * 5);
+    let question, answer;
+
+    if (type === "add") { question = `${a} + ${b}`; answer = a + b; }
+    if (type === "multiply") { question = `${a} × ${b}`; answer = a * b; }
+    if (type === "speed") { question = `${a} - ${b}`; answer = a - b; }
+
+    popup.innerHTML = `
+        <h3>${type.toUpperCase()} GAME</h3>
+        ${question} = ?
+        <input id="ans">
+        <button onclick="
+            if(parseInt(ans.value)===${answer}) {
+                save.xp+=20; saveGame(); updateHUD();
+                popup.classList.add('hidden');
+                inGame=false;
+            } else alert('Wrong!');
+        ">Submit</button>
+    `;
+    popup.classList.remove("hidden");
 }
 
-function enter3D() {
-    alert("3D World Placeholder\n(Use Three.js or Unity WebGL here)");
-}
-
-function save() {
-    localStorage.setItem("aworldUser", JSON.stringify(user));
-}
-
-function rand(max) {
-    return Math.floor(Math.random() * max) + 1;
+/* ================= UTILS ================= */
+function rand(n) {
+    return Math.floor(Math.random() * n) + 1;
 }
 </script>
 
