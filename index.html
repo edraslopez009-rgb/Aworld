@@ -63,25 +63,32 @@ let sfx=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
 
 /* ================= LOGIN ================= */
 function start(){
-if(!name.value||!grade.value) return alert("Fill all fields");
-save.name=name.value;
-save.grade=parseInt(grade.value);
-saveGame();
-login.classList.add("hidden");
-hud.classList.remove("hidden");
-updateHUD();
-music.play();
-init();
+    const nameInput = document.getElementById("name");
+    const gradeInput = document.getElementById("grade");
+
+    if(!nameInput.value || !gradeInput.value) return alert("Fill all fields");
+
+    save.name = nameInput.value;
+    save.grade = parseInt(gradeInput.value);
+    saveGame();
+
+    // Hide login, show HUD
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("hud").classList.remove("hidden");
+
+    updateHUD();
+    music.play();
+    init();
 }
 
 function updateHUD(){
-stats.innerHTML=
-`👤 ${save.name}<br>
-🎓 Grade ${save.grade}<br>
-⭐ Level ${save.level}<br>
-⚡ XP ${save.xp}/${save.level*100}<br>
-🪙 Coins ${save.coins}<br>
-📖 Story ${save.story}/3`;
+    document.getElementById("stats").innerHTML=
+    `👤 ${save.name}<br>
+     🎓 Grade ${save.grade}<br>
+     ⭐ Level ${save.level}<br>
+     ⚡ XP ${save.xp}/${save.level*100}<br>
+     🪙 Coins ${save.coins}<br>
+     📖 Story ${save.story}/3`;
 }
 
 /* ================= GAME ================= */
@@ -158,7 +165,7 @@ ctx.fillRect(player.x,player.y,player.s,player.s);
 
 ctx.restore();
 requestAnimationFrame(loop);
-}
+});
 
 /* ================= MINIGAMES ================= */
 function openMinigame(type){
@@ -244,4 +251,3 @@ function near(o){return Math.hypot(player.x-o.x,player.y-o.y)<40;}
 
 </body>
 </html>
-by co owner of jergan studio
