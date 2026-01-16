@@ -1,17 +1,26 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <title>AWorld Ultimate</title>
 
 <style>
-body{margin:0;background:#111;color:white;font-family:Arial;overflow:hidden;}
-canvas{background:#3a9d5d;display:block;}
-#ui{position:absolute;top:10px;left:10px;background:rgba(0,0,0,.8);padding:10px;border-radius:10px;width:260px}
-button,input,select{width:100%;margin:4px 0;padding:6px}
+body{margin:0;overflow:hidden;font-family:Arial;background:#111;color:white}
+canvas{display:block;background:#3a9d5d}
+#ui{
+position:absolute;top:10px;left:10px;
+background:rgba(0,0,0,.8);padding:10px;
+border-radius:10px;width:260px
+}
+button,input,select{width:100%;padding:6px;margin:4px 0}
 .hidden{display:none}
-#popup{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
-background:rgba(0,0,0,.9);padding:15px;border-radius:10px;width:320px;text-align:center}
+#popup{
+position:absolute;bottom:20px;left:50%;
+transform:translateX(-50%);
+background:rgba(0,0,0,.9);padding:15px;
+border-radius:10px;width:320px;text-align:center
+}
+.hint{font-size:12px;color:#ccc}
 </style>
 </head>
 
@@ -31,8 +40,9 @@ background:rgba(0,0,0,.9);padding:15px;border-radius:10px;width:320px;text-align
 
 <div id="hud" class="hidden">
 <div id="stats"></div>
+<div class="hint">Move: WASD · Interact: E</div>
 <button onclick="openShop()">🎨 Skins</button>
-<button onclick="teacher()">👩‍🏫 Teacher Mode</button>
+<button onclick="teacher()">👩‍🏫 Teacher</button>
 </div>
 </div>
 
@@ -40,28 +50,28 @@ background:rgba(0,0,0,.9);padding:15px;border-radius:10px;width:320px;text-align
 <div id="popup" class="hidden"></div>
 
 <script>
-/* ===== SAVE ===== */
-let save=JSON.parse(localStorage.getItem("aworldU"))||{
+/* ================= SAVE ================= */
+let save = JSON.parse(localStorage.getItem("aworld")) || {
 name:"",grade:3,xp:0,level:1,coins:0,skin:"cyan",story:0
 };
-function saveGame(){localStorage.setItem("aworldU",JSON.stringify(save));}
+const saveGame=()=>localStorage.setItem("aworld",JSON.stringify(save));
 
-/* ===== AUDIO ===== */
-const beep=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
-const win=new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg");
-const music=new Audio("https://actions.google.com/sounds/v1/ambiences/wind_chimes.ogg");
-music.loop=true;
+/* ================= AUDIO ================= */
+let music=new Audio("https://actions.google.com/sounds/v1/ambiences/wind_chimes.ogg");
+music.loop=true; music.volume=.3;
+let sfx=new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg");
 
-/* ===== LOGIN ===== */
+/* ================= LOGIN ================= */
 function start(){
-if(!name.value||!grade.value)return alert("Fill all");
+if(!name.value||!grade.value) return alert("Fill all fields");
 save.name=name.value;
 save.grade=parseInt(grade.value);
 saveGame();
 login.classList.add("hidden");
 hud.classList.remove("hidden");
-music.volume=0.3; music.play();
-updateHUD(); init();
+updateHUD();
+music.play();
+init();
 }
 
 function updateHUD(){
@@ -69,57 +79,57 @@ stats.innerHTML=
 `👤 ${save.name}<br>
 🎓 Grade ${save.grade}<br>
 ⭐ Level ${save.level}<br>
-⚡ XP ${save.xp}<br>
+⚡ XP ${save.xp}/${save.level*100}<br>
 🪙 Coins ${save.coins}<br>
 📖 Story ${save.story}/3`;
 }
 
-/* ===== GAME ===== */
-const c=document.getElementById("game"),ctx=c.getContext("2d");
-c.width=innerWidth;c.height=innerHeight;
-let cam={x:0,y:0};
-let player={x:200,y:200,s:22};
-let keys={},busy=false;
+/* ================= GAME ================= */
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 
+let player={x:200,y:200,s:22};
+let cam={x:0,y:0};
+let keys={},popupOpen=false;
 const map={w:2000,h:2000};
 
-/* ===== NPCs + STORY ===== */
-const npcs=[
-{x:300,y:300,text:"Welcome hero! Finish 3 math challenges.",quest:0},
-{x:800,y:600,text:"Great job! Keep learning.",quest:1},
-{x:1400,y:900,text:"You mastered AWorld!",quest:2}
-];
+onkeydown=e=>keys[e.key.toLowerCase()]=true;
+onkeyup=e=>keys[e.key.toLowerCase()]=false;
 
-/* ===== ZONES ===== */
+/* ================= WORLD ================= */
 const zones=[
 {x:600,y:400,type:"add"},
 {x:900,y:500,type:"fraction"},
 {x:1200,y:600,type:"algebra"}
 ];
 
-/* ===== LOOP ===== */
-function init(){
-onkeydown=e=>keys[e.key]=true;
-onkeyup=e=>keys[e.key]=false;
-loop();
-}
+const npcs=[
+{x:300,y:300,text:"Welcome! Solve math to grow stronger.",step:0},
+{x:900,y:900,text:"You're learning fast!",step:1},
+{x:1500,y:1200,text:"You mastered AWorld!",step:2}
+];
+
+/* ================= LOOP ================= */
+function init(){ requestAnimationFrame(loop); }
 
 function loop(){
-ctx.clearRect(0,0,c.width,c.height);
+ctx.clearRect(0,0,canvas.width,canvas.height);
 
-/* move */
+/* movement */
 if(keys.w)player.y-=4;
 if(keys.s)player.y+=4;
 if(keys.a)player.x-=4;
 if(keys.d)player.x+=4;
 
-/* camera follow */
-cam.x=player.x-c.width/2;
-cam.y=player.y-c.height/2;
-
 /* bounds */
 player.x=Math.max(0,Math.min(map.w,player.x));
 player.y=Math.max(0,Math.min(map.h,player.y));
+
+/* camera */
+cam.x=player.x-canvas.width/2;
+cam.y=player.y-canvas.height/2;
 
 ctx.save();
 ctx.translate(-cam.x,-cam.y);
@@ -132,14 +142,14 @@ ctx.fillRect(0,0,map.w,map.h);
 zones.forEach(z=>{
 ctx.fillStyle="orange";
 ctx.fillRect(z.x,z.y,40,40);
-if(dist(player,z)<30)minigame(z.type);
+if(near(z)&&keys.e) openMinigame(z.type);
 });
 
 /* NPCs */
 npcs.forEach(n=>{
 ctx.fillStyle="pink";
 ctx.fillRect(n.x,n.y,30,30);
-if(dist(player,n)<30&&save.story===n.quest)talk(n.text);
+if(near(n)&&keys.e&&save.story===n.step) talk(n.text);
 });
 
 /* player */
@@ -150,13 +160,15 @@ ctx.restore();
 requestAnimationFrame(loop);
 }
 
-/* ===== MINIGAMES ===== */
-function minigame(type){
-if(busy)return; busy=true; beep.play();
+/* ================= MINIGAMES ================= */
+function openMinigame(type){
+if(popupOpen) return;
+popupOpen=true; sfx.play();
 let a=r(),b=r(),q,ans;
+
 if(type==="add"){q=`${a}+${b}`;ans=a+b;}
 if(type==="fraction"){q=`${a}/${b}`;ans=(a/b).toFixed(2);}
-if(type==="algebra"){q=`x+5=${a+5}`;ans=a;}
+if(type==="algebra"){q=`x+4=${a+4}`;ans=a;}
 
 popup.innerHTML=`
 <h3>${type.toUpperCase()}</h3>
@@ -164,63 +176,70 @@ ${q}<br><br>
 <input id="ans">
 <button onclick="
 if(ans.value==${JSON.stringify(ans)}){
-win.play();
-save.xp+=20;save.coins+=5;
-if(save.xp>=save.level*100){save.xp=0;save.level++;}
-save.story++;
-saveGame();updateHUD();
+reward(); save.story++;
 closePop();
 }else alert('Try again!');
 ">Submit</button>`;
 popup.classList.remove("hidden");
 }
 
-/* ===== NPC TALK ===== */
+/* ================= NPC ================= */
 function talk(text){
-if(busy)return; busy=true;
-popup.innerHTML=`<p>${text}</p><button onclick="closePop()">OK</button>`;
+if(popupOpen) return;
+popupOpen=true;
+popup.innerHTML=`<p>${text}</p><button onclick="save.story++;closePop()">OK</button>`;
 popup.classList.remove("hidden");
 }
 
-/* ===== SHOP / SKINS ===== */
+/* ================= REWARD ================= */
+function reward(){
+save.xp+=20;
+save.coins+=5;
+if(save.xp>=save.level*100){
+save.xp-=save.level*100;
+save.level++;
+}
+saveGame(); updateHUD();
+}
+
+/* ================= SHOP ================= */
 function openShop(){
-busy=true;
+popupOpen=true;
 popup.innerHTML=`
 <h3>Skins</h3>
-<button onclick="skin('cyan')">Cyan (free)</button>
-<button onclick="skin('yellow')">Yellow (10 coins)</button>
-<button onclick="skin('red')">Red (10 coins)</button>
+<button onclick="setSkin('cyan',0)">Cyan (Free)</button>
+<button onclick="setSkin('yellow',10)">Yellow</button>
+<button onclick="setSkin('red',10)">Red</button>
 <button onclick="closePop()">Close</button>`;
 popup.classList.remove("hidden");
 }
+function setSkin(c,cost){
+if(cost&&save.coins<cost) return alert("Not enough coins");
+save.coins-=cost||0; save.skin=c;
+saveGame(); updateHUD();
+}
 
-function skin(c){
-if(c!=="cyan"&&save.coins<10)return alert("Need coins!");
-if(c!=="cyan")save.coins-=10;
-save.skin=c;saveGame();updateHUD();}
-
-/* ===== TEACHER MODE ===== */
+/* ================= TEACHER ================= */
 function teacher(){
-busy=true;
+popupOpen=true;
 popup.innerHTML=`
 <h3>Teacher Mode</h3>
 <p>Level: ${save.level}<br>XP: ${save.xp}<br>Coins: ${save.coins}</p>
-<button onclick="resetGame()">Reset Progress</button>
+<button onclick="resetGame()">Reset</button>
 <button onclick="closePop()">Close</button>`;
 popup.classList.remove("hidden");
 }
-
 function resetGame(){
-if(confirm("Reset all progress?")){
-localStorage.removeItem("aworldU");
+if(confirm("Reset progress?")){
+localStorage.removeItem("aworld");
 location.reload();
 }
 }
 
-/* ===== UTIL ===== */
-function closePop(){popup.classList.add("hidden");busy=false;}
+/* ================= UTIL ================= */
+function closePop(){popup.classList.add("hidden");popupOpen=false;}
 function r(){return Math.floor(Math.random()*save.grade*5)+1;}
-function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+function near(o){return Math.hypot(player.x-o.x,player.y-o.y)<40;}
 </script>
 
 </body>
