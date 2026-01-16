@@ -2,58 +2,40 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>AWorld – 2D Math Adventure</title>
+<title>AWorld 2D</title>
 
 <style>
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #111;
-    color: white;
-}
+body { margin:0; font-family:Arial; background:#111; color:white; }
+canvas { display:block; background:#2f8f4e; }
 
 #ui {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    background: rgba(0,0,0,0.8);
-    padding: 12px;
-    border-radius: 10px;
-    width: 250px;
+    position:absolute; top:10px; left:10px;
+    background:rgba(0,0,0,0.8);
+    padding:10px; border-radius:10px;
+    width:240px;
 }
 
-input, select, button {
-    width: 100%;
-    padding: 8px;
-    margin: 5px 0;
+button,input,select {
+    width:100%; padding:6px; margin:4px 0;
 }
 
-button {
-    background: #4caf50;
-    border: none;
-    color: white;
-    cursor: pointer;
-}
-
-.hidden {
-    display: none;
-}
-
-canvas {
-    display: block;
-    background: #2c7a3f;
-}
+button { background:#4caf50; border:none; color:white; }
+.hidden { display:none; }
 
 #popup {
-    position: absolute;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.9);
-    padding: 20px;
-    border-radius: 12px;
-    width: 300px;
-    text-align: center;
+    position:absolute; bottom:20px; left:50%;
+    transform:translateX(-50%);
+    background:rgba(0,0,0,0.9);
+    padding:15px; border-radius:10px;
+    width:320px;
+    text-align:center;
+}
+
+.touch {
+    position:absolute; bottom:20px; right:20px;
+}
+.touch button {
+    width:50px; height:50px; margin:2px;
 }
 </style>
 </head>
@@ -63,7 +45,7 @@ canvas {
 <div id="ui">
     <div id="login">
         <h2>AWorld</h2>
-        <input id="username" placeholder="Username">
+        <input id="username" placeholder="Name">
         <select id="grade">
             <option value="">Grade</option>
             <option>3</option><option>4</option><option>5</option>
@@ -74,150 +56,175 @@ canvas {
 
     <div id="hud" class="hidden">
         <div id="stats"></div>
-        <button onclick="openDaily()">Daily Quests</button>
+        <button onclick="openShop()">🛒 Shop</button>
     </div>
 </div>
 
 <canvas id="game"></canvas>
 <div id="popup" class="hidden"></div>
 
-<script>
-/* ================= SAVE ================= */
-let save = JSON.parse(localStorage.getItem("aworld2d")) || {
-    name: "", grade: 3, xp: 0, level: 1, lastDay: ""
-};
-function saveGame() {
-    localStorage.setItem("aworld2d", JSON.stringify(save));
-}
+<!-- Mobile controls -->
+<div class="touch">
+    <button ontouchstart="keys.w=true" ontouchend="keys.w=false">⬆</button><br>
+    <button ontouchstart="keys.a=true" ontouchend="keys.a=false">⬅</button>
+    <button ontouchstart="keys.s=true" ontouchend="keys.s=false">⬇</button>
+    <button ontouchstart="keys.d=true" ontouchend="keys.d=false">➡</button>
+</div>
 
-/* ================= LOGIN ================= */
-function start() {
-    if (!username.value || !grade.value) return alert("Fill everything");
-    save.name = username.value;
-    save.grade = parseInt(grade.value);
+<script>
+/* ===== SAVE ===== */
+let save = JSON.parse(localStorage.getItem("aworld")) || {
+    name:"", grade:3, xp:0, level:1, coins:0
+};
+function saveGame(){ localStorage.setItem("aworld", JSON.stringify(save)); }
+
+/* ===== LOGIN ===== */
+function start(){
+    if(!username.value||!grade.value) return alert("Fill all");
+    save.name=username.value;
+    save.grade=parseInt(grade.value);
     saveGame();
     login.classList.add("hidden");
     hud.classList.remove("hidden");
     updateHUD();
-    initGame();
+    init();
 }
 
-function updateHUD() {
-    stats.innerHTML =
-        `👤 ${save.name}<br>
-         🎓 Grade ${save.grade}<br>
-         ⭐ Level ${save.level}<br>
-         ⚡ XP ${save.xp}`;
+function updateHUD(){
+    stats.innerHTML=
+    `👤 ${save.name}<br>
+     🎓 Grade ${save.grade}<br>
+     ⭐ Level ${save.level}<br>
+     ⚡ XP ${save.xp}<br>
+     🪙 Coins ${save.coins}`;
 }
 
-/* ================= DAILY QUEST ================= */
-function openDaily() {
-    const today = new Date().toDateString();
-    if (save.lastDay === today) return alert("Daily quests done!");
+/* ===== CANVAS ===== */
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+canvas.width=innerWidth;
+canvas.height=innerHeight;
 
-    let correct = 0;
-    for (let i = 0; i < 4; i++) {
-        let a = rand(save.grade * 5);
-        let b = rand(save.grade * 5);
-        if (!prompt(`${a} + ${b} = ?`)) return;
-        if (parseInt(prompt(`${a} + ${b} = ?`)) === a + b) correct++;
-    }
+let player={x:100,y:100,s:20};
+let keys={};
+let inPopup=false;
 
-    if (correct === 4) {
-        save.xp += 100;
-        save.lastDay = today;
-        if (save.xp >= save.level * 200) {
-            save.xp = 0;
-            save.level++;
-        }
-        saveGame();
-        updateHUD();
-        alert("Daily quests complete!");
-    } else alert("Try again tomorrow!");
-}
-
-/* ================= GAME ================= */
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
-canvas.width = innerWidth;
-canvas.height = innerHeight;
-
-let player = { x: 100, y: 100, size: 20 };
-let keys = {};
-
-const zones = [
-    { x: 300, y: 200, type: "add" },
-    { x: 500, y: 200, type: "multiply" },
-    { x: 700, y: 200, type: "speed" }
+/* ===== ZONES & NPCs ===== */
+const zones=[
+ {x:300,y:200,type:"add"},
+ {x:420,y:200,type:"fraction"},
+ {x:540,y:200,type:"decimal"},
+ {x:660,y:200,type:"algebra"}
 ];
 
-function initGame() {
-    window.addEventListener("keydown", e => keys[e.key]=true);
-    window.addEventListener("keyup", e => keys[e.key]=false);
+const npcs=[
+ {x:200,y:400,text:"Hello! Math makes you stronger!"},
+ {x:500,y:400,text:"Earn coins from minigames!"}
+];
+
+/* ===== GAME LOOP ===== */
+function init(){
+    window.onkeydown=e=>keys[e.key]=true;
+    window.onkeyup=e=>keys[e.key]=false;
     loop();
 }
 
-function loop() {
+function loop(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
-    // Move
-    if (keys["w"]) player.y -= 3;
-    if (keys["s"]) player.y += 3;
-    if (keys["a"]) player.x -= 3;
-    if (keys["d"]) player.x += 3;
+    // move
+    if(keys.w) player.y-=3;
+    if(keys.s) player.y+=3;
+    if(keys.a) player.x-=3;
+    if(keys.d) player.x+=3;
 
-    // Player
-    ctx.fillStyle = "cyan";
-    ctx.fillRect(player.x, player.y, player.size, player.size);
+    // player
+    ctx.fillStyle="cyan";
+    ctx.fillRect(player.x,player.y,player.s,player.s);
 
-    // Zones
-    zones.forEach(z => {
-        ctx.fillStyle = z.type === "add" ? "red" :
-                        z.type === "multiply" ? "orange" : "purple";
-        ctx.fillRect(z.x, z.y, 40, 40);
+    // zones
+    zones.forEach(z=>{
+        ctx.fillStyle="orange";
+        ctx.fillRect(z.x,z.y,40,40);
+        if(dist(player,z)<30) openMinigame(z.type);
+    });
 
-        if (Math.hypot(player.x - z.x, player.y - z.y) < 30) {
-            openMinigame(z.type);
-        }
+    // npcs
+    npcs.forEach(n=>{
+        ctx.fillStyle="pink";
+        ctx.fillRect(n.x,n.y,30,30);
+        if(dist(player,n)<30) talk(n.text);
     });
 
     requestAnimationFrame(loop);
 }
 
-/* ================= MINIGAMES ================= */
-let inGame = false;
+/* ===== MINIGAMES ===== */
+function openMinigame(type){
+    if(inPopup) return;
+    inPopup=true;
 
-function openMinigame(type) {
-    if (inGame) return;
-    inGame = true;
+    let q,a;
+    if(type==="add"){
+        let x=r(),y=r(); q=`${x}+${y}`; a=x+y;
+    }
+    if(type==="fraction"){
+        let x=r(),y=r(); q=`${x}/${y} + 1`; a=x/y+1;
+    }
+    if(type==="decimal"){
+        let x=(r()/10).toFixed(1); let y=(r()/10).toFixed(1);
+        q=`${x} + ${y}`; a=(+x + +y).toFixed(1);
+    }
+    if(type==="algebra"){
+        let x=r(); q=`x + 3 = ${x+3}, x=?`; a=x;
+    }
 
-    let a = rand(save.grade * 5);
-    let b = rand(save.grade * 5);
-    let question, answer;
-
-    if (type === "add") { question = `${a} + ${b}`; answer = a + b; }
-    if (type === "multiply") { question = `${a} × ${b}`; answer = a * b; }
-    if (type === "speed") { question = `${a} - ${b}`; answer = a - b; }
-
-    popup.innerHTML = `
-        <h3>${type.toUpperCase()} GAME</h3>
-        ${question} = ?
+    popup.innerHTML=`
+        <h3>${type.toUpperCase()}</h3>
+        ${q}<br><br>
         <input id="ans">
         <button onclick="
-            if(parseInt(ans.value)===${answer}) {
-                save.xp+=20; saveGame(); updateHUD();
-                popup.classList.add('hidden');
-                inGame=false;
+            if(ans.value==${JSON.stringify(a)}){
+                save.xp+=20; save.coins+=5;
+                if(save.xp>=save.level*100){save.xp=0;save.level++;}
+                saveGame(); updateHUD();
+                popup.classList.add('hidden'); inPopup=false;
             } else alert('Wrong!');
-        ">Submit</button>
-    `;
+        ">Submit</button>`;
     popup.classList.remove("hidden");
 }
 
-/* ================= UTILS ================= */
-function rand(n) {
-    return Math.floor(Math.random() * n) + 1;
+/* ===== NPC TALK ===== */
+function talk(text){
+    if(inPopup) return;
+    inPopup=true;
+    popup.innerHTML=`<p>${text}</p><button onclick="popup.classList.add('hidden');inPopup=false;">OK</button>`;
+    popup.classList.remove("hidden");
 }
+
+/* ===== SHOP ===== */
+function openShop(){
+    inPopup=true;
+    popup.innerHTML=`
+    <h3>Shop</h3>
+    <button onclick="buy()">⭐ Level Boost (20 coins)</button>
+    <button onclick="closePop()">Close</button>`;
+    popup.classList.remove("hidden");
+}
+
+function buy(){
+    if(save.coins>=20){
+        save.coins-=20; save.level++;
+        saveGame(); updateHUD();
+        alert("Level up!");
+    } else alert("Not enough coins!");
+}
+
+function closePop(){ popup.classList.add("hidden"); inPopup=false; }
+
+/* ===== UTILS ===== */
+function r(){ return Math.floor(Math.random()*save.grade*5)+1; }
+function dist(a,b){ return Math.hypot(a.x-b.x,a.y-b.y); }
 </script>
 
 </body>
